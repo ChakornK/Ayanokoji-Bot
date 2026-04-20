@@ -27,13 +27,6 @@ handler = logging.FileHandler(filename='discord.log', encoding='utf=8', mode='w'
 intents = discord.Intents.default()
 intents.message_content = True
 
-bot = commands.Bot(command_prefix='!', intents=intents)
-
-@bot.event
-async def on_ready():
-    print(f"We are ready to go in, {bot.user.name}")
-
-
 ydl_opts = {
     'format': 'best',
     'outtmpl': '%(title)s.%(ext)s',
@@ -49,6 +42,9 @@ reddit_opts = {
     'extract_flat': False,
     'force_generic_extractor': False,
 }
+
+maxSize = 10 #in MB
+Firedownz_ID = 478004323700441108
 
 #Rewrite when using a bot host
 ffmpegP = "C:\\Libraries\\ffmpeg\\bin\\ffmpeg.exe"
@@ -108,9 +104,6 @@ def grabLink(text):
         text = text[start:end]
 
     return text
-
-maxSize = 10 #in MB
-Firedownz_ID = 478004323700441108
     
 def imgCompression(maxSizeMB, infile, outfile):
     quality = 95 #Quality is a pillow/image property from 100 to 0 which represents the % quality of an image
@@ -126,6 +119,12 @@ def imgCompression(maxSizeMB, infile, outfile):
         quality -= 5
 
     return outfile
+
+bot = commands.Bot(command_prefix='!', intents=intents)
+
+@bot.event
+async def on_ready():
+    print(f"We are ready to go in, {bot.user.name}")
 
 @bot.event
 async def on_message(message):
@@ -211,7 +210,6 @@ async def on_message(message):
                     temp_files.append(infile)
 
                     if infile.stat().st_size > (maxSize - 1) * 1024 * 1024: 
-                        #compression bug btw, fix it later. You are only compressing video not audio + other
                         infile = str(filename)
                         outfile = str(Path(filename).with_stem(Path(filename).stem + "_compressed"))
 
