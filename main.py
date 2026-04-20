@@ -182,7 +182,9 @@ async def on_message(message):
         #       Also, use reddit.json instead of ytdlp. reddit.json exposes a lot of information about the post
 
         try:
-            URL = URL + ".json"
+            clean_url = URL.split("?")[0].rstrip("/")
+            URL = clean_url + "/.json"
+            
             headers = {"User-Agent": "my-bot/0.1"} #prevents reddit from blocking access
 
             r = requests.get(URL, headers=headers, timeout=10) #gets the json
