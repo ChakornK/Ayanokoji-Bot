@@ -259,6 +259,51 @@ async def on_message(message):
                     print("No compression")
 
                 await message.reply(f"**{title}** \n{description}", file=discord.File(outfile))
+            elif post.get("is_gallery") == True:
+                outfiles = []
+                images = []
+                title = post.get("title", "")
+                description = post.get("selftext", "")
+
+                for item in post["gallery_data"]["items"]:
+                        media_id = item["media_id"]
+                        meta = post["media_metadata"][media_id]
+
+                        if meta["status"] == "valid":
+                            url = meta["s"]["u"]
+
+                            # fix HTML encoding
+                            url = url.replace("&amp;", "&")
+
+                            images.append(url)
+                for url in images:
+                    filename = Path(urlparse(url).path).name 
+                    infile = Path(filename)
+
+                    temp_files.append(infile)
+
+                    r = requests.get(url, timeout=20)
+                    r.raise_for_status()
+
+                    infile.write_bytes(r.content)
+
+                    if infile.stat().st_size > (maxSize - 1) * 1024 * 1024: 
+                        infile = filename
+                        outfile = Path(filename).with_stem(Path(filename).stem + "_compressed")
+
+                        outfile = imgCompression(maxSize, infile, outfile)
+                        print("compression")
+
+                        temp_files.append(outfile)
+                    else:
+                        outfile = infile
+                        print("No compression")
+
+                    outfiles.append(outfile)
+                    discord_files = [discord.File(str(f)) for f in outfiles]
+
+                await message.reply(f"**{title}** \n{description}", files=discord_files)
+
 
 
         except Exception as e:
