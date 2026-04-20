@@ -9,6 +9,7 @@ import subprocess #allows to run command line inputd
 from PIL import Image #Pillow, for image compression
 import requests
 from urllib.parse import urlparse
+import json
 
 #referneces:
 #   Instagram:
@@ -22,6 +23,8 @@ from urllib.parse import urlparse
 
 load_dotenv()
 token = os.getenv('DISCORD_TOKEN')
+
+CONFIG_FILE = Path("config.json")
 
 handler = logging.FileHandler(filename='discord.log', encoding='utf=8', mode='w')
 intents = discord.Intents.default()
@@ -45,11 +48,25 @@ reddit_opts = {
 
 maxSize = 10 #in MB
 Firedownz_ID = 478004323700441108
-Target_Channel = None
 
 #Rewrite when using a bot host
 ffmpegP = "C:\\Libraries\\ffmpeg\\bin\\ffmpeg.exe"
 ffprobeP =  "C:\\Libraries\\ffmpeg\\bin\\ffprobe.exe"
+
+def load_data():
+    if CONFIG_FILE.exists():
+            with open(CONFIG_FILE, "r") as f:
+                return json.load(f)
+    else:
+        return {}
+    
+def save_data(data):
+    with open(CONFIG_FILE, "w") as f:
+        json.dump(data, f, indent=4) #indent=4 makes file more human readable
+
+def get_channel_id(guild_id):
+    data = load_data()
+    return data.get(str(guild_id), {}).get("channel_id", None)
 
 def vidCompression(maxSizeMB, infile, outfile):
     infile = Path(infile)
@@ -125,8 +142,18 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 
 @bot.command()
 async def setChannel(ctx, *, msg):
-    global Target_Channel
+    if get_channel_id(ctx.guild.id) != None:
+        Target_Channel = await bot.fetch_channel(get_channel_id(ctx.guild.id))
+    else:
+        Target_Channel = None
+
     try:
+        data = load_data()
+        guild_id = str(ctx.guild.id)
+
+        if guild_id not in data:
+            data[guild_id] = {}
+
         channel_id = int(msg)
         channel = await bot.fetch_channel(channel_id)
         if Target_Channel == None:
@@ -134,6 +161,10 @@ async def setChannel(ctx, *, msg):
         else:
             await ctx.reply(f"Setting channel from '{Target_Channel}' to '{channel.name}':'{channel.id}'")
         Target_Channel = channel
+
+        data[guild_id]["channel_id"] = Target_Channel.id
+        save_data(data)
+
         print('set')
     except discord.NotFound:
         await ctx.reply(f"Channel '{channel_id}' does not exist")
@@ -149,10 +180,26 @@ async def setChannel(ctx, *, msg):
 
 @bot.command()
 async def currentChannel(ctx):
+    if get_channel_id(ctx.guild.id) != None:
+        Target_Channel = await bot.fetch_channel(get_channel_id(ctx.guild.id))
+    else:
+        Target_Channel = None
+
     if Target_Channel == None:
         await ctx.reply(f"None/Not set")
     else:
         await ctx.reply(f"{Target_Channel.name}: {Target_Channel.id}")
+
+@bot.event
+async def on_guild_join(guild):
+    #initializes json to default settings
+    data = load_data()
+
+    data[str(guild.id)] = {
+        "channel_id": None
+    }
+
+    save_data(data)
 
 @bot.event
 async def on_ready():
@@ -160,6 +207,11 @@ async def on_ready():
 
 @bot.event
 async def on_message(message):
+    if get_channel_id(message.guild.id) != None:
+        Target_Channel = await bot.fetch_channel(get_channel_id(message.guild.id))
+    else:
+        Target_Channel = None
+
     if message.author == bot.user:
         return
     
@@ -434,8 +486,5 @@ async def on_message(message):
                 infile.unlink(missing_ok=True)
                 print("Deleted infile")
 
-
-
-    await bot.process_commands(message)
 
 bot.run(token, log_handler=handler, log_level=logging.DEBUG)
