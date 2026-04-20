@@ -55,32 +55,46 @@ ffmpegP = "C:\\Libraries\\ffmpeg\\bin\\ffmpeg.exe"
 ffprobeP =  "C:\\Libraries\\ffmpeg\\bin\\ffprobe.exe"
 
 def vidCompression(maxSizeMB, infile, outfile):
-    #1MB = 8000kb
-    maxSizekb = (maxSizeMB-1) * 8000
+    infile = Path(infile)
+    outfile = Path(outfile)
+
+    target_bytes = (maxSizeMB - 1) * 1024 * 1024
 
     result = subprocess.run(
         [
             ffprobeP,
             "-v", "error",
             "-show_entries", "format=duration",
-            "-of", "csv=p=0",
-            infile
+            "-of", "default=noprint_wrappers=1:nokey=1",
+            str(infile)
         ],
         capture_output=True,
-        text=True
+        text=True,
+        check=True
     )
 
     duration = float(result.stdout.strip())
 
-    bitRate = f"{int(maxSizekb / duration)}k"
+    audio_bitrate = 32_000   # way lower than 128k
+    total_bitrate = int((target_bytes * 8) / duration)
+    video_bitrate = int((total_bitrate - audio_bitrate) * 0.95)
+
+    if video_bitrate <= 10_000:
+        raise Exception("Even ultra-low settings are too small for this target")
 
     subprocess.run([
         ffmpegP,
-        "-i", infile,
-        "-b:v", bitRate,
-        "-b:a", "128k",
-        outfile
-    ])
+        "-y",
+        "-i", str(infile),
+        "-vf", "scale=-2:240",   # shrink resolution hard
+        "-r", "15",              # lower fps
+        "-c:v", "libx264",
+        "-b:v", f"{max(video_bitrate // 1000, 10)}k",
+        "-c:a", "aac",
+        "-ac", "1",              # mono audio
+        "-b:a", "32k",
+        str(outfile)
+    ], check=True)
 
     return outfile
 
@@ -97,20 +111,6 @@ def grabLink(text):
 
 maxSize = 10 #in MB
 Firedownz_ID = 478004323700441108
-
-def checkVideo(info):
-    print("Pre-checkVideo")
-    ext = info.get("ext")
-    print("checkVideo is able to run")
-
-    if ext in ["mp4", "webm", "mkv"]:
-        print("Video detected")
-        return True
-    elif ext in ["jpg", "png", "webp", "jpeg"]:
-        print("Image detected")
-        return False
-    else:
-        raise Exception("Unknown File")
     
 def imgCompression(maxSizeMB, infile, outfile):
     quality = 95 #Quality is a pillow/image property from 100 to 0 which represents the % quality of an image
@@ -126,13 +126,6 @@ def imgCompression(maxSizeMB, infile, outfile):
         quality -= 5
 
     return outfile
-
-def redditImageUrlConv(url):
-    #https://www.reddit.com/media?url=https%3A%2F%2Fi.redd.it%2Foyy3g24sqtvg1.jpeg -> https://i.redd.it/oyy3g24sqtvg1.jpeg
-    result = url.split("%F")[-1]
-    redditURL = "https://i.redd.it/" + result
-
-    return redditURL
 
 @bot.event
 async def on_message(message):
