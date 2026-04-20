@@ -163,6 +163,9 @@ async def on_message(message):
             await message.reply(f"{user.mention}Download/send failed: `{e}`")
 
         finally:
+            if infile:
+                infile = Path(infile)
+
             if outfile and outfile.exists():
                 outfile.unlink(missing_ok=True)
                 print("Delete outfile")
@@ -184,7 +187,7 @@ async def on_message(message):
         try:
             clean_url = URL.split("?")[0].rstrip("/")
             URL = clean_url + "/.json"
-            
+
             headers = {"User-Agent": "my-bot/0.1"} #prevents reddit from blocking access
 
             r = requests.get(URL, headers=headers, timeout=10) #gets the json
@@ -338,6 +341,9 @@ async def on_message(message):
             await message.reply(f"{user.mention}Download/send failed: `{e}`")
 
         finally:
+            if infile:
+                infile = Path(infile)
+
             if outfile and outfile.exists():
                 outfile.unlink(missing_ok=True)
                 print("Delete outfile")
@@ -345,6 +351,48 @@ async def on_message(message):
             if infile and infile.exists():
                 infile.unlink(missing_ok=True)
                 print("Deleted infile")
+    elif "www.youtube.com" in URL:
+        infile = None
+        outfile = None
+
+        try: 
+            with YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(URL, download = True)
+
+                title = info.get("title")
+                description = info.get("description")
+
+                filename = ydl.prepare_filename(info) #filepath
+
+            infile = Path(filename)
+
+            if infile.stat().st_size > (maxSize - 1) * 1024 * 1024: #size is in bytes, therefore conversion MB->Bytes
+                infile = str(filename)
+                outfile = str(Path(filename).with_stem(Path(filename).stem + "_compressed"))
+
+                outfile = vidCompression(maxSize, infile, outfile)
+                print("compression")
+            else:
+                outfile = infile
+                print("No compression")
+
+            await message.reply(f"**{title}**\n{description}", file=discord.File(outfile))
+        except Exception as e:
+            user = await bot.fetch_user(Firedownz_ID)
+            await message.reply(f"{user.mention}Download/send failed: `{e}`")
+
+        finally:
+            if infile:
+                infile = Path(infile)
+
+            if outfile and outfile.exists():
+                outfile.unlink(missing_ok=True)
+                print("Deleted outfile")
+
+            if infile and infile.exists():
+                infile.unlink(missing_ok=True)
+                print("Deleted infile")
+
 
 
     await bot.process_commands(message)
