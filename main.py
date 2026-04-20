@@ -45,6 +45,7 @@ reddit_opts = {
 
 maxSize = 10 #in MB
 Firedownz_ID = 478004323700441108
+Target_Channel = None
 
 #Rewrite when using a bot host
 ffmpegP = "C:\\Libraries\\ffmpeg\\bin\\ffmpeg.exe"
@@ -122,6 +123,34 @@ def imgCompression(maxSizeMB, infile, outfile):
 
 bot = commands.Bot(command_prefix='!', intents=intents)
 
+@bot.command()
+async def setChannel(ctx, *, channel_id: int):
+    global Target_Channel
+    try:
+        channel = await bot.fetch_channel(channel_id)
+        if Target_Channel == None:
+            await ctx.reply(f"Setting channel from 'Nothing' to '{channel.name}':'{channel.id}'")
+        else:
+            await ctx.reply(f"Setting channel from '{Target_Channel}' to '{channel.name}':'{channel.id}'")
+        Target_Channel = channel
+        print('set')
+    except discord.NotFound:
+        await ctx.reply(f"Channel '{channel}' does not exist")
+        print('not found')
+    except discord.Forbidden:
+        await ctx.reply(f"Bot cannot access channel '{channel}'")
+        print('forbidden')
+    except discord.HTTPException:
+        await ctx.reply(f"Channel '{channel}' results in an unknown error")
+        print('unknown error')
+
+@bot.command()
+async def currentChannel(ctx):
+    if Target_Channel == None:
+        await ctx.reply(f"None/Not set")
+    else:
+        await ctx.reply(f"{Target_Channel.name}: {Target_Channel.id}")
+
 @bot.event
 async def on_ready():
     print(f"We are ready to go in, {bot.user.name}")
@@ -129,6 +158,15 @@ async def on_ready():
 @bot.event
 async def on_message(message):
     if message.author == bot.user:
+        return
+    
+    await bot.process_commands(message) # let commands run first
+
+    if message.content.startswith('!'): # prevents commands from reaching code
+        return
+
+    if Target_Channel is None or message.channel.id != Target_Channel.id: # only restrict normal messages
+        print('not right channel')
         return
     
     URL = grabLink(message.content)
