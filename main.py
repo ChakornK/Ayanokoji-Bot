@@ -219,6 +219,7 @@ async def on_message(message):
                     temp_files.append(infile)
 
                     if infile.stat().st_size > (maxSize - 1) * 1024 * 1024: 
+                        #compression bug btw, fix it later. You are only compressing video not audio + other
                         infile = str(filename)
                         outfile = str(Path(filename).with_stem(Path(filename).stem + "_compressed"))
 
@@ -231,6 +232,34 @@ async def on_message(message):
                         print("No compression")
 
                     await message.reply(f"**{title}** \n{description}", file=discord.File(outfile))
+            elif post.get("post_hint") == "image":
+                imageURL = post.get("url")
+                filename = Path(urlparse(imageURL).path).name  # gets "oyy3g24sqtvg1.jpeg"
+                infile = Path(filename)
+                title = post.get("title", "")
+                description = post.get("selftext", "")
+
+                temp_files.append(infile)
+
+                r = requests.get(imageURL, timeout=20)
+                r.raise_for_status()
+
+                infile.write_bytes(r.content)
+
+                if infile.stat().st_size > (maxSize - 1) * 1024 * 1024: 
+                    infile = filename
+                    outfile = Path(filename).with_stem(Path(filename).stem + "_compressed")
+
+                    outfile = imgCompression(maxSize, infile, outfile)
+                    print("compression")
+
+                    temp_files.append(outfile)
+                else:
+                    outfile = infile
+                    print("No compression")
+
+                await message.reply(f"**{title}** \n{description}", file=discord.File(outfile))
+
 
         except Exception as e:
             user = await bot.fetch_user(Firedownz_ID)
