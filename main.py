@@ -72,7 +72,7 @@ def vidCompression(maxSizeMB, infile, outfile):
 
     duration = float(result.stdout.strip())
 
-    audio_bitrate = 32_000   # way lower than 128k
+    audio_bitrate = 32_000   # 32k bits
     total_bitrate = int((target_bytes * 8) / duration)
     video_bitrate = int((total_bitrate - audio_bitrate) * 0.95)
 
