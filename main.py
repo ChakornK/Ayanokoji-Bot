@@ -124,9 +124,10 @@ def imgCompression(maxSizeMB, infile, outfile):
 bot = commands.Bot(command_prefix='!', intents=intents)
 
 @bot.command()
-async def setChannel(ctx, *, channel_id: int):
+async def setChannel(ctx, *, msg):
     global Target_Channel
     try:
+        channel_id = int(msg)
         channel = await bot.fetch_channel(channel_id)
         if Target_Channel == None:
             await ctx.reply(f"Setting channel from 'Nothing' to '{channel.name}':'{channel.id}'")
@@ -135,14 +136,16 @@ async def setChannel(ctx, *, channel_id: int):
         Target_Channel = channel
         print('set')
     except discord.NotFound:
-        await ctx.reply(f"Channel '{channel}' does not exist")
+        await ctx.reply(f"Channel '{channel_id}' does not exist")
         print('not found')
     except discord.Forbidden:
-        await ctx.reply(f"Bot cannot access channel '{channel}'")
+        await ctx.reply(f"Bot cannot access channel '{channel_id}'")
         print('forbidden')
     except discord.HTTPException:
-        await ctx.reply(f"Channel '{channel}' results in an unknown error")
+        await ctx.reply(f"Channel '{channel_id}' results in an unknown error")
         print('unknown error')
+    except Exception as e:
+        await ctx.reply(f"Error: {e}")
 
 @bot.command()
 async def currentChannel(ctx):
