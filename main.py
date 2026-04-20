@@ -202,9 +202,35 @@ async def on_message(message):
 
             if post.get("is_self") == True:
                 #Make this do seperate messages for longer posts
-                title = post.get("title", "")
+                title = post.get("title", "") #get title if not, return blank string
                 description = post.get("selftext", "")
+
                 await message.reply(f"**{title}** \n{description}")
+            elif post.get("is_video") == True:
+                with YoutubeDL(reddit_opts) as ydl:
+                    info = ydl.extract_info(URL, download = True)
+
+                    title = info.get("title") or "Reddit Post" #or operator in the context is like, if the first is null us the second
+                    description = info.get("description") or ""
+
+                    filename = ydl.prepare_filename(info)
+                    infile = Path(filename)
+
+                    temp_files.append(infile)
+
+                    if infile.stat().st_size > (maxSize - 1) * 1024 * 1024: 
+                        infile = str(filename)
+                        outfile = str(Path(filename).with_stem(Path(filename).stem + "_compressed"))
+
+                        outfile = vidCompression(maxSize, infile, outfile)
+                        print("compression")
+
+                        temp_files.append(outfile)
+                    else:
+                        outfile = infile
+                        print("No compression")
+
+                    await message.reply(f"**{title}** \n{description}", file=discord.File(outfile))
 
         except Exception as e:
             user = await bot.fetch_user(Firedownz_ID)
