@@ -142,7 +142,6 @@ async def on_message(message):
     URL = grabLink(message.content)
 
     if "www.instagram.com/reel" in URL:
-
         infile = None
         outfile = None
 
@@ -304,8 +303,6 @@ async def on_message(message):
 
                 await message.reply(f"**{title}** \n{description}", files=discord_files)
 
-
-
         except Exception as e:
             user = await bot.fetch_user(Firedownz_ID)
             await message.reply(f"{user.mention}Download/send failed: `{e}`")
@@ -317,84 +314,46 @@ async def on_message(message):
                         print(f"Deleted {f}")
                 except Exception:
                     pass
+
+    elif "www.tiktok.com" in URL:
+        infile = None
+        outfile = None
+
+        try: 
+            with YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(URL, download = True)
+
+                title = info.get("description")
+
+                filename = ydl.prepare_filename(info) #filepath
+
+            infile = Path(filename)
+
+            if infile.stat().st_size > (maxSize - 1) * 1024 * 1024: #size is in bytes, therefore conversion MB->Bytes
+                infile = str(filename)
+                outfile = str(Path(filename).with_stem(Path(filename).stem + "_compressed"))
+
+                outfile = vidCompression(maxSize, infile, outfile)
+                print("compression")
+            else:
+                outfile = infile
+                print("No compression")
+
+            await message.reply(f"**{title}**", file=discord.File(outfile))
+        except Exception as e:
+            user = await bot.fetch_user(Firedownz_ID)
+            await message.reply(f"{user.mention}Download/send failed: `{e}`")
+
+        finally:
+            if outfile and outfile.exists():
+                outfile.unlink(missing_ok=True)
+                print("Delete outfile")
+
+            if infile and infile.exists():
+                infile.unlink(missing_ok=True)
+                print("Deleted infile")
+
 
     await bot.process_commands(message)
-
-'''
-        try: 
-            with YoutubeDL(reddit_opts) as ydl:
-                print("reddit pre-info")
-                info = ydl.extract_info(URL, download = False)
-                print("reddit post-info")
-
-                title = info.get("title") or "Reddit Post" #or operator in the context is like, if the first is null us the second
-                description = info.get("description") or ""
-
-                #filename = ydl.prepare_filename(info) <- breaks code if it is a playlist
-
-                if info.get("_type") != "playlist":
-                    if checkVideo(info):
-                        info = ydl.extract_info(URL, download=True)
-
-                        filename = ydl.prepare_filename(info)
-                        infile = Path(filename)
-
-                        temp_files.append(infile)
-
-                        if infile.stat().st_size > (maxSize - 1) * 1024 * 1024: 
-                            infile = str(filename)
-                            outfile = str(Path(filename).with_stem(Path(filename).stem + "_compressed"))
-
-                            outfile = vidCompression(maxSize, infile, outfile)
-                            print("compression")
-
-                            temp_files.append(outfile)
-                        else:
-                            outfile = infile
-                            print("No compression")
-                    else: #else it is an image
-                        imageURL = redditImageUrlConv(info.get("url"))
-                        filename = Path(urlparse(imageURL).path).name  # gets "oyy3g24sqtvg1.jpeg"
-                        infile = Path(filename)
-
-                        temp_files.append(infile)
-
-                        r = requests.get(imageURL, timeout=20)
-                        r.raise_for_status()
-
-                        infile.write_bytes(r.content)
-
-                        if infile.stat().st_size > (maxSize - 1) * 1024 * 1024: 
-                            infile = filename
-                            outfile = Path(filename).with_stem(Path(filename).stem + "_compressed")
-
-                            outfile = imgCompression(maxSize, infile, outfile)
-                            print("compression")
-
-                            temp_files.append(outfile)
-                        else:
-                            outfile = infile
-                            print("No compression")
-
-                    await message.reply(f"**{title}** \n{description}", file=discord.File(outfile))
-                else: #else it is a gallary (only image)
-                    print("Hi")
-
-        except Exception as e:
-            user = await bot.fetch_user(Firedownz_ID)
-            await message.reply(f"{user.mention}Download/send failed: `{e}`")
-
-        finally:
-            for f in temp_files:
-                try:
-                    if f.exists():
-                        f.unlink(missing_ok=True)
-                        print(f"Deleted {f}")
-                except Exception:
-                    pass
-'''
-
-    
-
 
 bot.run(token, log_handler=handler, log_level=logging.DEBUG)
