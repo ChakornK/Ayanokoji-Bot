@@ -46,7 +46,6 @@ reddit_opts = {
     'format': 'bestvideo+bestaudio/best',
     'outtmpl': '%(title)s.%(ext)s',
     'merge_output_format': 'mp4',
-    'ffmpeg_location': "C:\\Libraries\\ffmpeg\\bin",
     'restrictfilenames': True,
     'quiet': True,
     'extract_flat': False,
@@ -57,8 +56,8 @@ maxSize = 10 #in MB
 Firedownz_ID = 478004323700441108
 
 #Rewrite when using a bot host
-ffmpegP = "C:\\Libraries\\ffmpeg\\bin\\ffmpeg.exe"
-ffprobeP =  "C:\\Libraries\\ffmpeg\\bin\\ffprobe.exe"
+ffmpegP = "ffmpeg"
+ffprobeP =  "ffprobe"
 
 def load_data():
     if CONFIG_FILE.exists():
