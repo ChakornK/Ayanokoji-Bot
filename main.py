@@ -30,6 +30,13 @@ handler = logging.FileHandler(filename='discord.log', encoding='utf=8', mode='w'
 intents = discord.Intents.default()
 intents.message_content = True
 
+Restrictions = True
+maxVideoSize = 20 * 1024 * 1024 #Bytes
+maxVideoDuration = 180 #seconds
+maxImgSize = 20 * 1024 * 1024 #Bytes
+
+#Note: There is currently no checks to make sure downloading an image is under the restriction, only checks image during compression phase sop fix this later.
+
 ydl_opts = {
     'format': 'best',
     'outtmpl': '%(title)s.%(ext)s',
@@ -87,7 +94,13 @@ def vidCompression(maxSizeMB, infile, outfile):
         check=True
     )
 
-    duration = float(result.stdout.strip())
+    duration = float(result.stdout.strip()) #seconds
+
+    if Restrictions:
+        if duration is not None and duration >= maxVideoDuration:
+            raise Exception(f"Video is larger than {maxVideoDuration} seconds")
+        elif infile.stat().st_size is not None and infile.stat().st_size / (1024 * 1024) >= maxVideoSize:
+            raise Exception(f"Video is larger than {maxVideoSize / (1024*1024)} MB") 
 
     audio_bitrate = 32_000   # 32k bits
     total_bitrate = int((target_bytes * 8) / duration)
@@ -125,6 +138,10 @@ def grabLink(text):
     
 def imgCompression(maxSizeMB, infile, outfile):
     quality = 95 #Quality is a pillow/image property from 100 to 0 which represents the % quality of an image
+
+    if Restrictions:
+        if infile.stat().st_size is not None and infile.stat().st_size / (1024 * 1024) >= maxImgSize:
+            raise Exception(f"Video is larger than {maxImgSize / (1024*1024)} MB") 
 
     while quality > 10:
         img = Image.open(infile)
@@ -232,7 +249,15 @@ async def on_message(message):
 
         try: 
             with YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(URL, download = True)
+                info = ydl.extract_info(URL, download = False)
+
+                if Restrictions:
+                    if info.get("filesize_approx") is not None and info.get("filesize_approx") >= maxVideoSize:
+                        raise Exception(f"Video is larger than {maxVideoSize / (1024*1024)} MB")
+                    elif info.get("duration") is not None and info.get("duration") >= maxVideoDuration:
+                        raise Exception(f"Video is larger than {maxVideoDuration} seconds")
+
+                info = ydl.extract_info(URL, download = True) 
 
                 title = info.get("description")
 
@@ -297,7 +322,15 @@ async def on_message(message):
                 await message.reply(f"**{title}** \n{description}")
             elif post.get("is_video") == True:
                 with YoutubeDL(reddit_opts) as ydl:
-                    info = ydl.extract_info(URL, download = True)
+                    info = ydl.extract_info(URL, download = False)
+
+                    if Restrictions:
+                        if info.get("filesize_approx") is not None and info.get("filesize_approx") >= maxVideoSize:
+                            raise Exception(f"Video is larger than {maxVideoSize / (1024*1024)} MB")
+                        elif info.get("duration") is not None and info.get("duration") >= maxVideoDuration:
+                            raise Exception(f"Video is larger than {maxVideoDuration} seconds")
+
+                    info = ydl.extract_info(URL, download = True) 
 
                     title = info.get("title") or "Reddit Post" #or operator in the context is like, if the first is null us the second
                     description = info.get("description") or ""
@@ -410,7 +443,15 @@ async def on_message(message):
 
         try: 
             with YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(URL, download = True)
+                info = ydl.extract_info(URL, download = False)
+
+                if Restrictions:
+                    if info.get("filesize_approx") is not None and info.get("filesize_approx") >= maxVideoSize:
+                        raise Exception(f"Video is larger than {maxVideoSize / (1024*1024)} MB")
+                    elif info.get("duration") is not None and info.get("duration") >= maxVideoDuration:
+                        raise Exception(f"Video is larger than {maxVideoDuration} seconds")
+
+                info = ydl.extract_info(URL, download = True) 
 
                 title = info.get("description")
 
@@ -450,7 +491,15 @@ async def on_message(message):
 
         try: 
             with YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(URL, download = True)
+                info = ydl.extract_info(URL, download = False)
+
+                if Restrictions:
+                    if info.get("filesize_approx") is not None and info.get("filesize_approx") >= maxVideoSize:
+                        raise Exception(f"Video is larger than {maxVideoSize / (1024*1024)} MB")
+                    elif info.get("duration") is not None and info.get("duration") >= maxVideoDuration:
+                        raise Exception(f"Video is larger than {maxVideoDuration} seconds")
+
+                info = ydl.extract_info(URL, download = True) 
 
                 title = info.get("title")
                 description = info.get("description")
