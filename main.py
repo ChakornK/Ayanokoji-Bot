@@ -305,7 +305,7 @@ async def on_message(message):
             clean_url = URL.split("?")[0].rstrip("/")
             URL = clean_url + "/.json"
 
-            headers = {"User-Agent": "my-bot/0.1"} #prevents reddit from blocking access
+            headers = {"User-Agent": "my-bot/0.1 by u/Firedownz"} #prevents reddit from blocking access
 
             r = requests.get(URL, headers=headers, timeout=10) #gets the json
             r.raise_for_status() #if error, throws exception
