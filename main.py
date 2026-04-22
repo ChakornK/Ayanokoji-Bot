@@ -43,9 +43,10 @@ ydl_opts = {
 }
 
 ydl_opts_youtube = {
-    'format': 'best',
+    'format': 'bv*[height<=720]+ba/b',
     'outtmpl': '%(title)s.%(ext)s',
     'cookiefile': 'www.youtube.com_cookies.txt',
+    'merge_output_format': 'mp4',
 }
 
 ydl_opts_instagram = {
