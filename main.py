@@ -540,7 +540,8 @@ async def on_message(message):
             if infile and infile.exists():
                 infile.unlink(missing_ok=True)
                 print("Deleted infile")
-    elif "www.youtube.com" in URL:
+    elif any(x in URL for x in ["youtube.com", "youtu.be", "m.youtube.com"]):
+        print("Youtube")
         infile = None
         outfile = None
 
