@@ -42,6 +42,24 @@ ydl_opts = {
     'outtmpl': '%(title)s.%(ext)s',
 }
 
+ydl_opts_youtube = {
+    'format': 'best',
+    'outtmpl': '%(title)s.%(ext)s',
+    'cookiefile': 'www.youtube.com_cookies.txt',
+}
+
+ydl_opts_instagram = {
+    'format': 'best',
+    'outtmpl': '%(title)s.%(ext)s',
+    'cookiefile': 'www.instagram.com_cookies.txt',
+}
+
+ydl_opts_tiktok = {
+    'format': 'best',
+    'outtmpl': '%(title)s.%(ext)s',
+    'cookiefile': 'www.tiktok.com_cookies.txt',
+}
+
 reddit_opts = {
     'format': 'bestvideo+bestaudio/best',
     'outtmpl': '%(title)s.%(ext)s',
@@ -50,6 +68,7 @@ reddit_opts = {
     'quiet': True,
     'extract_flat': False,
     'force_generic_extractor': False,
+    'cookiefile': 'www.reddit.com_cookies.txt',
 }
 
 maxSize = 10 #in MB
@@ -247,7 +266,7 @@ async def on_message(message):
         outfile = None
 
         try: 
-            with YoutubeDL(ydl_opts) as ydl:
+            with YoutubeDL(ydl_opts_instagram) as ydl:
                 info = ydl.extract_info(URL, download = False)
 
                 if Restrictions:
@@ -300,8 +319,12 @@ async def on_message(message):
         #Notes: yt-dlp cannot handle reddit images cuz some weird shit so use Invoke-WebRequest
         #       Also, this assumes a post does not have both images and videos: Either single video or single image or multiple images
         #       Also, use reddit.json instead of ytdlp. reddit.json exposes a lot of information about the post
+        #
+        #       Reddit Requires an API for the .json stuff so you gotta apply and wait... bruhhhhhh
+        
 
         try:
+            '''
             clean_url = URL.split("?")[0].rstrip("/")
             URL = clean_url + "/.json"
 
@@ -423,7 +446,39 @@ async def on_message(message):
                     discord_files = [discord.File(str(f)) for f in outfiles]
 
                 await message.reply(f"**{title}** \n{description}", files=discord_files)
+            '''
+            with YoutubeDL(reddit_opts) as ydl:
+                info = ydl.extract_info(URL, download = False)
 
+                if Restrictions:
+                    if info.get("filesize_approx") is not None and info.get("filesize_approx") >= maxVideoSize:
+                        raise Exception(f"Video is larger than {maxVideoSize / (1024*1024)} MB")
+                    elif info.get("duration") is not None and info.get("duration") >= maxVideoDuration:
+                        raise Exception(f"Video is larger than {maxVideoDuration} seconds")
+
+                info = ydl.extract_info(URL, download = True) 
+
+                title = info.get("title") or "Reddit Post" #or operator in the context is like, if the first is null us the second
+                description = info.get("description") or ""
+
+                filename = ydl.prepare_filename(info)
+                infile = Path(filename)
+
+                temp_files.append(infile)
+
+                if infile.stat().st_size > (maxSize - 1) * 1024 * 1024: 
+                    infile = str(filename)
+                    outfile = str(Path(filename).with_stem(Path(filename).stem + "_compressed"))
+
+                    outfile = vidCompression(maxSize, infile, outfile)
+                    print("compression")
+
+                    temp_files.append(outfile)
+                else:
+                    outfile = infile
+                    print("No compression")
+
+                await message.reply(f"**{title}** \n{description}", file=discord.File(outfile))
         except Exception as e:
             user = await bot.fetch_user(Firedownz_ID)
             await message.reply(f"{user.mention}Download/send failed: `{e}`")
@@ -441,7 +496,7 @@ async def on_message(message):
         outfile = None
 
         try: 
-            with YoutubeDL(ydl_opts) as ydl:
+            with YoutubeDL(ydl_opts_tiktok) as ydl:
                 info = ydl.extract_info(URL, download = False)
 
                 if Restrictions:
@@ -489,7 +544,7 @@ async def on_message(message):
         outfile = None
 
         try: 
-            with YoutubeDL(ydl_opts) as ydl:
+            with YoutubeDL(ydl_opts_youtube) as ydl:
                 info = ydl.extract_info(URL, download = False)
 
                 if Restrictions:

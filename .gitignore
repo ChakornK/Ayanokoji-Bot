@@ -1,4 +1,8 @@
 .env
 .venv/
 *.pem
+www.instagram.com_cookies.txt
+www.youtube.com_cookies.txt
+www.reddit.com_cookies.txt
+www.tiktok.com_cookies.txt
 __pycache__/
