@@ -30,9 +30,12 @@ handler = logging.FileHandler(filename='discord.log', encoding='utf=8', mode='w'
 intents = discord.Intents.default()
 intents.message_content = True
 
-Restrictions = True
+videoSizeRestriction = False
+videoDurationRestriction = True
+imgSizeRestriction = False
+
 maxVideoSize = 20 * 1024 * 1024 #Bytes
-maxVideoDuration = 180 #seconds
+maxVideoDuration = 300 #seconds
 maxImgSize = 20 * 1024 * 1024 #Bytes
 
 #Note: There is currently no checks to make sure downloading an image is under the restriction, only checks image during compression phase sop fix this later.
@@ -43,7 +46,7 @@ ydl_opts = {
 }
 
 ydl_opts_youtube = {
-    'format': 'bv*[height<=720]+ba/b',
+    'format': 'bestvideo+bestaudio/best',
     'outtmpl': '%(title)s.%(ext)s',
     'cookiefile': 'www.youtube.com_cookies.txt',
     'merge_output_format': 'mp4',
@@ -115,11 +118,11 @@ def vidCompression(maxSizeMB, infile, outfile):
 
     duration = float(result.stdout.strip()) #seconds
 
-    if Restrictions:
-        if duration is not None and duration >= maxVideoDuration:
-            raise Exception(f"Video is larger than {maxVideoDuration} seconds")
-        elif infile.stat().st_size is not None and infile.stat().st_size / (1024 * 1024) >= maxVideoSize:
-            raise Exception(f"Video is larger than {maxVideoSize / (1024*1024)} MB") 
+    if duration is not None and duration >= maxVideoDuration and videoDurationRestriction:
+        raise Exception(f"Video is larger than {maxVideoDuration} seconds")
+    
+    if infile.stat().st_size is not None and infile.stat().st_size / (1024 * 1024) >= maxVideoSize and videoSizeRestriction:
+        raise Exception(f"Video is larger than {maxVideoSize / (1024*1024)} MB") 
 
     audio_bitrate = 32_000   # 32k bits
     total_bitrate = int((target_bytes * 8) / duration)
@@ -158,9 +161,8 @@ def grabLink(text):
 def imgCompression(maxSizeMB, infile, outfile):
     quality = 95 #Quality is a pillow/image property from 100 to 0 which represents the % quality of an image
 
-    if Restrictions:
-        if infile.stat().st_size is not None and infile.stat().st_size / (1024 * 1024) >= maxImgSize:
-            raise Exception(f"Video is larger than {maxImgSize / (1024*1024)} MB") 
+    if infile.stat().st_size is not None and infile.stat().st_size / (1024 * 1024) >= maxImgSize and imgSizeRestriction:
+        raise Exception(f"Video is larger than {maxImgSize / (1024*1024)} MB") 
 
     while quality > 10:
         img = Image.open(infile)
@@ -270,11 +272,11 @@ async def on_message(message):
             with YoutubeDL(ydl_opts_instagram) as ydl:
                 info = ydl.extract_info(URL, download = False)
 
-                if Restrictions:
-                    if info.get("filesize_approx") is not None and info.get("filesize_approx") >= maxVideoSize:
-                        raise Exception(f"Video is larger than {maxVideoSize / (1024*1024)} MB")
-                    elif info.get("duration") is not None and info.get("duration") >= maxVideoDuration:
-                        raise Exception(f"Video is larger than {maxVideoDuration} seconds")
+                if info.get("filesize_approx") is not None and info.get("filesize_approx") >= maxVideoSize and videoSizeRestriction:
+                    raise Exception(f"Video is larger than {maxVideoSize / (1024*1024)} MB")
+                
+                if info.get("duration") is not None and info.get("duration") >= maxVideoDuration and videoDurationRestriction:
+                    raise Exception(f"Video is larger than {maxVideoDuration} seconds")
 
                 info = ydl.extract_info(URL, download = True) 
 
@@ -451,11 +453,11 @@ async def on_message(message):
             with YoutubeDL(reddit_opts) as ydl:
                 info = ydl.extract_info(URL, download = False)
 
-                if Restrictions:
-                    if info.get("filesize_approx") is not None and info.get("filesize_approx") >= maxVideoSize:
-                        raise Exception(f"Video is larger than {maxVideoSize / (1024*1024)} MB")
-                    elif info.get("duration") is not None and info.get("duration") >= maxVideoDuration:
-                        raise Exception(f"Video is larger than {maxVideoDuration} seconds")
+                if info.get("filesize_approx") is not None and info.get("filesize_approx") >= maxVideoSize and videoSizeRestriction:
+                    raise Exception(f"Video is larger than {maxVideoSize / (1024*1024)} MB")
+                
+                if info.get("duration") is not None and info.get("duration") >= maxVideoDuration and videoDurationRestriction:
+                    raise Exception(f"Video is larger than {maxVideoDuration} seconds")
 
                 info = ydl.extract_info(URL, download = True) 
 
@@ -500,11 +502,11 @@ async def on_message(message):
             with YoutubeDL(ydl_opts_tiktok) as ydl:
                 info = ydl.extract_info(URL, download = False)
 
-                if Restrictions:
-                    if info.get("filesize_approx") is not None and info.get("filesize_approx") >= maxVideoSize:
-                        raise Exception(f"Video is larger than {maxVideoSize / (1024*1024)} MB")
-                    elif info.get("duration") is not None and info.get("duration") >= maxVideoDuration:
-                        raise Exception(f"Video is larger than {maxVideoDuration} seconds")
+                if info.get("filesize_approx") is not None and info.get("filesize_approx") >= maxVideoSize and videoSizeRestriction:
+                    raise Exception(f"Video is larger than {maxVideoSize / (1024*1024)} MB")
+                
+                if info.get("duration") is not None and info.get("duration") >= maxVideoDuration and videoDurationRestriction:
+                    raise Exception(f"Video is larger than {maxVideoDuration} seconds")
 
                 info = ydl.extract_info(URL, download = True) 
 
@@ -549,11 +551,11 @@ async def on_message(message):
             with YoutubeDL(ydl_opts_youtube) as ydl:
                 info = ydl.extract_info(URL, download = False)
 
-                if Restrictions:
-                    if info.get("filesize_approx") is not None and info.get("filesize_approx") >= maxVideoSize:
-                        raise Exception(f"Video is larger than {maxVideoSize / (1024*1024)} MB")
-                    elif info.get("duration") is not None and info.get("duration") >= maxVideoDuration:
-                        raise Exception(f"Video is larger than {maxVideoDuration} seconds")
+                if info.get("filesize_approx") is not None and info.get("filesize_approx") >= maxVideoSize and videoSizeRestriction:
+                    raise Exception(f"Video is larger than {maxVideoSize / (1024*1024)} MB")
+                
+                if info.get("duration") is not None and info.get("duration") >= maxVideoDuration and videoDurationRestriction:
+                    raise Exception(f"Video is larger than {maxVideoDuration} seconds")
 
                 info = ydl.extract_info(URL, download = True) 
 
