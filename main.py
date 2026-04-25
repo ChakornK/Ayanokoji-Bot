@@ -176,6 +176,16 @@ def imgCompression(maxSizeMB, infile, outfile):
 
     return outfile
 
+def loadingBarffmpeg(progress):
+    #Example: Compressing: [#-------------------] 5%
+    #20 entries
+    percent = progress / 100
+    filled = int(20 * percent)
+    bar = "#" * filled + "-" * (20 - filled)
+
+    return f"Compressing: [{bar}] {percent}%"
+
+
 bot = commands.Bot(command_prefix='!', intents=intents)
 
 @bot.command()
