@@ -10,6 +10,8 @@ from PIL import Image #Pillow, for image compression
 import requests
 from urllib.parse import urlparse
 import json
+import asyncio
+import time
 
 #referneces:
 #   Instagram:
@@ -97,7 +99,7 @@ def get_channel_id(guild_id):
     data = load_data()
     return data.get(str(guild_id), {}).get("channel_id", None)
 
-def vidCompression(maxSizeMB, infile, outfile):
+async def vidCompression(maxSizeMB, infile, outfile, oMessage): #async(ing) a function makes it so that the program can process other stuff while waiting for this function to finish
     infile = Path(infile)
     outfile = Path(outfile)
 
@@ -131,7 +133,7 @@ def vidCompression(maxSizeMB, infile, outfile):
     if video_bitrate <= 10_000:
         raise Exception("Even ultra-low settings are too small for this target")
 
-    subprocess.run([
+    cmd = [
         ffmpegP,
         "-y",
         "-i", str(infile),
@@ -142,8 +144,51 @@ def vidCompression(maxSizeMB, infile, outfile):
         "-c:a", "aac",
         "-ac", "1",              # mono audio
         "-b:a", "32k",
+        "-progress", "pipe:1",
         str(outfile)
-    ], check=True)
+    ]
+
+    proc = await asyncio.create_subprocess_exec( #subprocess.run = freezes and waits; subprocess.open = allows python to do other stuff while waiting; asyncio is the async version which allows for other discord commands
+        *cmd, #* is the unpacking operator.Turns list into separate arguments
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+    )
+
+    lastEditTime = 0 #important to keep tabs as you can only manipulate discord messages every 0.5-2 seconds
+
+    msg = await oMessage.reply("Compressing: [--------------------] 0%")
+
+    while True:
+        line = await proc.stdout.readline()
+
+        if not line:
+            break
+
+        line = line.decode().strip()
+
+        if line.startswith("out_time_ms="):
+            processed_ms = int(line.split("=")[1])
+            processed_seconds = processed_ms / 1_000_000
+
+            percent = min(processed_seconds / duration, 1)
+
+            # only edit every 1 second
+            current_time = time.time()
+
+            if current_time - lastEditTime >= 1:
+                lastEditTime = current_time
+
+                await msg.edit(
+                    content= loadingBarffmpeg(percent)
+                )
+
+    await proc.wait()
+
+    await msg.edit(
+        content="Compressing: [####################] 100%"
+    )
+
+    await msg.delete()
 
     return outfile
 
@@ -176,14 +221,13 @@ def imgCompression(maxSizeMB, infile, outfile):
 
     return outfile
 
-def loadingBarffmpeg(progress):
+def loadingBarffmpeg(percent):
     #Example: Compressing: [#-------------------] 5%
     #20 entries
-    percent = progress / 100
     filled = int(20 * percent)
     bar = "#" * filled + "-" * (20 - filled)
 
-    return f"Compressing: [{bar}] {percent}%"
+    return f"Compressing: [{bar}] {int(percent * 100)}%"
 
 
 bot = commands.Bot(command_prefix='!', intents=intents)
@@ -300,7 +344,7 @@ async def on_message(message):
                 infile = str(filename)
                 outfile = str(Path(filename).with_stem(Path(filename).stem + "_compressed"))
 
-                outfile = vidCompression(maxSize, infile, outfile)
+                outfile = await vidCompression(maxSize, infile, outfile, message)
                 print("compression")
             else:
                 outfile = infile
@@ -483,7 +527,7 @@ async def on_message(message):
                     infile = str(filename)
                     outfile = str(Path(filename).with_stem(Path(filename).stem + "_compressed"))
 
-                    outfile = vidCompression(maxSize, infile, outfile)
+                    outfile = await vidCompression(maxSize, infile, outfile, message)
                     print("compression")
 
                     temp_files.append(outfile)
@@ -530,7 +574,7 @@ async def on_message(message):
                 infile = str(filename)
                 outfile = str(Path(filename).with_stem(Path(filename).stem + "_compressed"))
 
-                outfile = vidCompression(maxSize, infile, outfile)
+                outfile = await vidCompression(maxSize, infile, outfile, message)
                 print("compression")
             else:
                 outfile = infile
@@ -580,7 +624,7 @@ async def on_message(message):
                 infile = str(filename)
                 outfile = str(Path(filename).with_stem(Path(filename).stem + "_compressed"))
 
-                outfile = vidCompression(maxSize, infile, outfile)
+                outfile = await vidCompression(maxSize, infile, outfile, message)
                 print("compression")
             else:
                 outfile = infile

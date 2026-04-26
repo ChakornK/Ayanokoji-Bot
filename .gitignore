@@ -1,6 +1,7 @@
 .env
 .venv/
 *.pem
+config.json
 www.instagram.com_cookies.txt
 www.youtube.com_cookies.txt
 www.reddit.com_cookies.txt
