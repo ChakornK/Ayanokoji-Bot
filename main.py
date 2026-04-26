@@ -393,6 +393,7 @@ async def on_message(message):
         try:
             process = await asyncio.create_subprocess_exec(
                 "gallery-dl",
+                "--cookies", "www.reddit.com_cookies.txt",
                 "-j",
                 URL,
                 stdout=asyncio.subprocess.PIPE,
@@ -471,6 +472,7 @@ async def on_message(message):
 
                 process = await asyncio.create_subprocess_exec(
                     "gallery-dl",
+                    "--cookies", "www.reddit.com_cookies.txt",
                     URL,
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE
@@ -517,6 +519,7 @@ async def on_message(message):
 
                 process = await asyncio.create_subprocess_exec(
                     "gallery-dl",
+                    "--cookies", "www.reddit.com_cookies.txt",
                     URL,
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE
