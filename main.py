@@ -332,10 +332,15 @@ async def on_message(message):
       using_instaloader = False
       try:
         with YoutubeDL(ydl_opts_instagram) as ydl:
-          info = ydl.extract_info(URL, download = False)
-          title = info.get("description")
+          info = None
+          title = ""
+          try:
+            info = ydl.extract_info(URL, download = False)
+            title = info.get("description")
+          except:
+            pass
           
-          if info.get("entries") is None or len(info.get("entries")) > 0:
+          if info is not None and (info.get("entries") is None or len(info.get("entries")) > 0):
             # Single video/reel
             if info.get("filesize_approx") is not None and info.get("filesize_approx") >= maxVideoSize and videoSizeRestriction:
               raise Exception(f"Video is larger than {maxVideoSize / (1024*1024)} MB")
@@ -358,6 +363,9 @@ async def on_message(message):
               file_path = Path(f"{os.getcwd()}/{post_id}/{file}")
               if file_path.is_file() and not any(x in str(file_path) for x in [".json.xz", ".txt"]):
                 infiles.append(file_path)
+              elif file_path.is_file() and ".txt" in str(file_path) and title == "":
+                with open(file_path, "r", encoding="utf-8") as f:
+                  title = f.read()
         
         for infile_path in infiles:
           if infile_path.stat().st_size > (maxSize - 1) * 1024 * 1024: #size is in bytes, therefore conversion MB->Bytes
@@ -371,12 +379,13 @@ async def on_message(message):
             print("No compression")
 
         if outfiles:
+          title = title.strip()
           while len(title) > 1996:
               await message.reply(f"**{title[0:1990]}**...")
               title = title[1990:]
           title = f"**{title}**"
           discord_files = [discord.File(str(f)) for f in outfiles]
-          await message.reply(files=discord_files)
+          await message.reply(title, files=discord_files)
         else:
           await message.reply("No media")
 
