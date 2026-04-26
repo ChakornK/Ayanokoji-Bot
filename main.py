@@ -595,7 +595,8 @@ async def on_message(message):
 
                 await message.reply(postText, files=discord_files)
             else:
-                print("Reddit not applicable category")
+                with open("reddit_debug.json", "w", encoding="utf-8") as f:
+                    json.dump(data, f, indent=2, ensure_ascii=False)
         except Exception as e:
             print("reddit exception")
             user = await bot.fetch_user(Firedownz_ID)
