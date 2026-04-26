@@ -672,6 +672,15 @@ async def on_message(message):
                             print("compression")
 
                             temp_files.append(outfile)
+                        else:
+                            outfile = infile
+                            print("No compression")
+
+                        while len(postText) > 2000:
+                            await message.reply(postText[0:1997] + "...")
+                            postText = postText[1997:]
+
+                        await message.reply(postText, file=discord.File(outfile))
                 except:
                     print("Def not video")
 
