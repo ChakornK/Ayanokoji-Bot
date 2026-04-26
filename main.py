@@ -483,6 +483,29 @@ async def on_message(message):
 
                 postText = f"**{title}** \n{description}"
 
+                process = await asyncio.create_subprocess_exec(
+                    "gallery-dl",
+                    "--cookies", "www.reddit.com_cookies.txt",
+                    URL,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE
+                )
+
+                try:
+                    stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=30)
+                except asyncio.TimeoutError:
+                    process.kill()
+                    raise Exception("gallery-dl timed out on Reddit")
+                
+                err = stderr.decode(errors="replace").strip()
+                out = stdout.decode(errors="replace").strip()
+
+                if process.returncode != 0:
+                    raise Exception(err or "gallery-dl failed with no stderr")
+
+                if not out:
+                    raise Exception("gallery-dl returned empty output")
+
                 paths = stdout.decode().strip().splitlines()
 
                 if not paths:
@@ -516,6 +539,29 @@ async def on_message(message):
                 description = post.get("selftext", "")
 
                 postText = f"**{title}** \n{description}"
+
+                process = await asyncio.create_subprocess_exec(
+                    "gallery-dl",
+
+                    URL,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE
+                )
+
+                try:
+                    stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=30)
+                except asyncio.TimeoutError:
+                    process.kill()
+                    raise Exception("gallery-dl timed out on Reddit")
+
+                err = stderr.decode(errors="replace").strip()
+                out = stdout.decode(errors="replace").strip()
+
+                if process.returncode != 0:
+                    raise Exception(err or "gallery-dl failed with no stderr")
+
+                if not out:
+                    raise Exception("gallery-dl returned empty output")
 
                 paths = stdout.decode().strip().splitlines()
 
