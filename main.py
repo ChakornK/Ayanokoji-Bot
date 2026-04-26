@@ -406,14 +406,21 @@ async def on_message(message):
                 process.kill()
                 raise Exception("gallery-dl timed out on Reddit")
 
+            err = stderr.decode(errors="replace").strip()
+            out = stdout.decode(errors="replace").strip()
+
             if process.returncode != 0:
-                raise Exception(stderr.decode().strip() or "gallery-dl failed")
+                 raise Exception(err or "gallery-dl failed with no stderr")
+
+            if not out:
+                raise Exception("gallery-dl returned empty output")
 
             data = json.loads(stdout.decode())
 
             post = data[0][1]
 
             if post.get("is_self") == True:
+                print("reddit text")
                 #Make this do seperate messages for longer posts
                 title = post.get("title", "") #get title if not, return blank string
                 description = post.get("selftext", "")
@@ -426,6 +433,7 @@ async def on_message(message):
 
                 await message.reply(postText)
             elif post.get("is_video") == True:
+                print("reddit video")
                 with YoutubeDL(reddit_opts) as ydl:
                     info = ydl.extract_info(URL, download = False)
 
@@ -465,6 +473,7 @@ async def on_message(message):
 
                     await message.reply(postText, file=discord.File(outfile))
             elif post.get("post_hint") == "image":
+                print("reddit image")
                 title = post.get("title", "")
                 description = post.get("selftext", "")
 
@@ -483,6 +492,15 @@ async def on_message(message):
                 except asyncio.TimeoutError:
                     process.kill()
                     raise Exception("gallery-dl timed out on Reddit")
+                
+                err = stderr.decode(errors="replace").strip()
+                out = stdout.decode(errors="replace").strip()
+
+                if process.returncode != 0:
+                    raise Exception(err or "gallery-dl failed with no stderr")
+
+                if not out:
+                    raise Exception("gallery-dl returned empty output")
 
                 paths = stdout.decode().strip().splitlines()
 
@@ -511,6 +529,7 @@ async def on_message(message):
 
                 await message.reply(postText, file=discord.File(outfile))
             elif post.get("is_gallery") == True:
+                print("reddit gallery")
                 outfiles = []
                 title = post.get("title", "")
                 description = post.get("selftext", "")
@@ -530,6 +549,15 @@ async def on_message(message):
                 except asyncio.TimeoutError:
                     process.kill()
                     raise Exception("gallery-dl timed out on Reddit")
+
+                err = stderr.decode(errors="replace").strip()
+                out = stdout.decode(errors="replace").strip()
+
+                if process.returncode != 0:
+                    raise Exception(err or "gallery-dl failed with no stderr")
+
+                if not out:
+                    raise Exception("gallery-dl returned empty output")
 
                 paths = stdout.decode().strip().splitlines()
 
