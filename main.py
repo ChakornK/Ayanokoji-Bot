@@ -642,6 +642,39 @@ async def on_message(message):
 
                 await message.reply(postText, files=discord_files)
             else:
+                try:
+                    with YoutubeDL(reddit_opts) as ydl:
+                        info = ydl.extract_info(URL, download = False)
+
+                        if info.get("filesize_approx") is not None and info.get("filesize_approx") >= maxVideoSize and videoSizeRestriction:
+                            raise Exception(f"Video is larger than {maxVideoSize / (1024*1024)} MB")
+                        
+                        if info.get("duration") is not None and info.get("duration") >= maxVideoDuration and videoDurationRestriction:
+                            raise Exception(f"Video is larger than {maxVideoDuration} seconds")
+
+                        info = ydl.extract_info(URL, download = True) 
+
+                        title = info.get("title") or "Reddit Post" #or operator in the context is like, if the first is null us the second
+                        description = info.get("description") or ""
+
+                        postText = f"**{title}** \n{description}"
+
+                        filename = ydl.prepare_filename(info)
+                        infile = Path(filename)
+
+                        temp_files.append(infile)
+
+                        if infile.stat().st_size > (maxSize - 1) * 1024 * 1024: 
+                            infile = str(filename)
+                            outfile = str(Path(filename).with_stem(Path(filename).stem + "_compressed"))
+
+                            outfile = await vidCompression(maxSize, infile, outfile, message)
+                            print("compression")
+
+                            temp_files.append(outfile)
+                except:
+                    print("Def not video")
+
                 print("reddit not a category")
                 with open("reddit_debug.json", "w", encoding="utf-8") as f:
                     json.dump(data, f, indent=2, ensure_ascii=False)
