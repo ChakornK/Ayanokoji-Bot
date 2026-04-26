@@ -1,6 +1,7 @@
 discord.py
 python-dotenv
 yt-dlp
+instaloader
 pillow
 requests
 gallery-dl
