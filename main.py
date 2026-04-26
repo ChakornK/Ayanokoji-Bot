@@ -327,86 +327,98 @@ async def on_message(message):
     URL = grabLink(message.content)
 
     if any(x in URL for x in ["www.instagram.com/reel", "www.instagram.com/p/"]):
-      infiles = []
-      outfiles = []
-      using_instaloader = False
-      try:
-        with YoutubeDL(ydl_opts_instagram) as ydl:
-          info = ydl.extract_info(URL, download = False)
-          title = info.get("description")
-          
-          if info.get("entries") is None or len(info.get("entries")) > 0:
-            # Single video/reel
-            if info.get("filesize_approx") is not None and info.get("filesize_approx") >= maxVideoSize and videoSizeRestriction:
-              raise Exception(f"Video is larger than {maxVideoSize / (1024*1024)} MB")
-            if info.get("duration") is not None and info.get("duration") >= maxVideoDuration and videoDurationRestriction:
-              raise Exception(f"Video is larger than {maxVideoDuration} seconds")
-            
-            info = ydl.extract_info(URL, download = True)
-            filename = ydl.prepare_filename(info)
-            infiles.append(Path(filename))
-          else:
-            # Carousel/Album
-            using_instaloader = True
-            post_id = URL.split("com/")[1].split("/")[1].split("?")[0]
-            post = Post.from_shortcode(instaloader_self.context, post_id)
-            success = instaloader_self.download_post(post=post, target=post_id)
-            if not success:
-              raise Exception("Download failed")
-            
-            for file in os.listdir(f"{os.getcwd()}/{post_id}"):
-              file_path = Path(f"{os.getcwd()}/{post_id}/{file}")
-              if file_path.is_file() and not any(x in str(file_path) for x in [".json.xz", ".txt"]):
-                infiles.append(file_path)
-        
-        for infile_path in infiles:
-          if infile_path.stat().st_size > (maxSize - 1) * 1024 * 1024: #size is in bytes, therefore conversion MB->Bytes
-            infile_str = str(infile_path)
-            outfile_str = str(infile_path.with_stem(infile_path.stem + "_compressed"))
-            outfile_path = await vidCompression(maxSize, infile_str, outfile_str, message)
-            print("compression")
-            outfiles.append(outfile_path)
-          else:
-            outfiles.append(infile_path)
-            print("No compression")
+        infiles = []
+        outfiles = []
+        using_instaloader = False
+        try:
+            with YoutubeDL(ydl_opts_instagram) as ydl:
+                info = None
+                title = ""
+                try:
+                    info = ydl.extract_info(URL, download=False)
+                    title = info.get("description") or ""
+                except:
+                    pass
 
-        if outfiles:
-          while len(title) > 1996:
-              await message.reply(f"**{title[0:1990]}**...")
-              title = title[1990:]
-          title = f"**{title}**"
-          discord_files = [discord.File(str(f)) for f in outfiles]
-          await message.reply(files=discord_files)
-        else:
-          await message.reply("No media")
+                if info is None or "entries" in info:
+                    # Carousel/Album
+                    using_instaloader = True
+                    post_id = URL.split("com/")[1].split("/")[1].split("?")[0]
+                    instaloader_self.download_post(post=Post.from_shortcode(instaloader_self.context, post_id), target=post_id)
+                    
+                    for file in os.listdir(f"{os.getcwd()}/{post_id}"):
+                        file_path = Path(f"{os.getcwd()}/{post_id}/{file}")
+                        if file_path.is_file() and not any(x in str(file_path) for x in [".json.xz", ".txt"]):
+                            infiles.append(file_path)
+                        elif file_path.is_file() and ".txt" in str(file_path) and title == "":
+                            with open(file_path, "r", encoding="utf-8") as f:
+                                title = f.read()
+                else:
+                    # Single video/reel
+                    if info.get("filesize_approx") is not None and info.get("filesize_approx") >= maxVideoSize and videoSizeRestriction:
+                        raise Exception(f"Video is larger than {maxVideoSize / (1024*1024)} MB")
+                    if info.get("duration") is not None and info.get("duration") >= maxVideoDuration and videoDurationRestriction:
+                        raise Exception(f"Video is larger than {maxVideoDuration} seconds")
+                    
+                    info = ydl.extract_info(URL, download=True)
+                    if info is None:
+                        raise Exception("failed to download video")
+                        
+                    filename = ydl.prepare_filename(info)
+                    infiles.append(Path(filename))
 
-      except Exception as e:
-        user = await bot.fetch_user(Firedownz_ID)
-        await message.reply(f"{user.mention}Download/send failed: `{e}`")
-      finally:
-        for outfile in outfiles:
-          if outfile and outfile.exists():
-            outfile.unlink(missing_ok=True)
-            print("Deleted outfile")
-        
-        for infile in infiles:
-          if infile and infile.exists():
-            infile.unlink(missing_ok=True)
-            print("Deleted infile")
-        
-        if using_instaloader:
-          post_id = URL.split("com/")[1].split("/")[1].split("?")[0]
-          carousel_dir = Path(f"{os.getcwd()}/{post_id}")
-          if carousel_dir.exists() and carousel_dir.is_dir():
-            try:
-              for file in os.listdir(carousel_dir):
-                file_path = Path(f"{os.getcwd()}/{post_id}/{file}")
-                if file_path.is_file():
-                  file_path.unlink(missing_ok=True)
-              carousel_dir.rmdir() # Removes directory if empty
-              print("Deleted carousel directory")
-            except OSError:
-              pass
+            for infile_path in infiles:
+                if infile_path.stat().st_size > (maxSize - 1) * 1024 * 1024:
+                    infile_str = str(infile_path)
+                    outfile_str = str(infile_path.with_stem(infile_path.stem + "_compressed"))
+                    
+                    if infile_str.lower().endswith(('.mp4', '.mov', '.webm')):
+                        outfile_path = await vidCompression(maxSize, infile_str, outfile_str, message)
+                    else:
+                        outfile_path = await imgCompression(maxSize, infile_str, outfile_str, message)
+                        
+                    print("compression")
+                    outfiles.append(outfile_path)
+                else:
+                    outfiles.append(infile_path)
+                    print("No compression")
+
+            if outfiles:
+                title = title.strip()
+                while len(title) > 1996:
+                    await message.reply(f"**{title[0:1990]}**...")
+                    title = title[1990:]
+                title = f"**{title}**"
+                discord_files = [discord.File(str(f)) for f in outfiles]
+                await message.reply(title, files=discord_files)
+            else:
+                await message.reply("No media")
+
+        except Exception as e:
+            user = await bot.fetch_user(Firedownz_ID)
+            await message.reply(f"{user.mention} Download/send failed: `{e}`")
+        finally:
+            for outfile in outfiles:
+                if outfile and Path(outfile).exists():
+                    Path(outfile).unlink(missing_ok=True)
+                    print("Deleted outfile")
+            for infile in infiles:
+                if infile and Path(infile).exists():
+                    Path(infile).unlink(missing_ok=True)
+                    print("Deleted infile")
+            if using_instaloader:
+                post_id = URL.split("com/")[1].split("/")[1].split("?")[0]
+                carousel_dir = Path(f"{os.getcwd()}/{post_id}")
+                if carousel_dir.exists() and carousel_dir.is_dir():
+                    try:
+                        for file in os.listdir(carousel_dir):
+                            file_path = Path(f"{os.getcwd()}/{post_id}/{file}")
+                            if file_path.is_file():
+                                file_path.unlink(missing_ok=True)
+                        carousel_dir.rmdir() # Removes directory if empty
+                        print("Deleted carousel directory")
+                    except OSError:
+                        pass
     
     elif any(x in URL for x in ["reddit.com", "redd.it", "i.redd.it", "preview.redd.it"]):
         print("reddit")
