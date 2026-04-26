@@ -9,6 +9,7 @@ from pathlib import Path #turns strings to path objects (I think)
 import subprocess #allows to run command line inputd
 from PIL import Image #Pillow, for image compression
 import requests
+import http.cookiejar
 from urllib.parse import urlparse
 import json
 import asyncio
@@ -87,6 +88,9 @@ ffprobeP =  "ffprobe"
 
 # Set up Instaloader
 instaloader_self = Instaloader()
+instaloader_cookie_jar = http.cookiejar.MozillaCookieJar("www.instagram.com_cookies.txt")
+instaloader_cookie_jar.load(ignore_discard=True, ignore_expires=True)
+instaloader_self.context.update_cookies(instaloader_cookie_jar)
 
 def load_data():
     if CONFIG_FILE.exists():
