@@ -340,6 +340,10 @@ async def on_message(message):
 
                 title = info.get("description")
 
+                if len(title) > 2000:
+                   message.reply(title[0:1990] + "...")
+                   title =  title[1990:]
+
                 filename = ydl.prepare_filename(info) #filepath
 
             infile = Path(filename)
