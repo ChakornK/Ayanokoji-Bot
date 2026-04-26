@@ -340,10 +340,6 @@ async def on_message(message):
 
                 title = info.get("description")
 
-                if len(title) > 2000:
-                   message.reply(title[0:1990] + "...")
-                   title =  title[1990:]
-
                 filename = ydl.prepare_filename(info) #filepath
 
             infile = Path(filename)
@@ -358,7 +354,13 @@ async def on_message(message):
                 outfile = infile
                 print("No compression")
 
-            await message.reply(f"**{title}**", file=discord.File(outfile))
+            while len(title) > 1996:
+                await message.reply(f"**{title[0:1990]}**" + "...")
+                title = title[1990:]
+
+            title = f"**{title}**"
+
+            await message.reply(title, file=discord.File(outfile))
         except Exception as e:
             user = await bot.fetch_user(Firedownz_ID)
             await message.reply(f"{user.mention}Download/send failed: `{e}`")
@@ -526,6 +528,8 @@ async def on_message(message):
                 title = info.get("title") or "Reddit Post" #or operator in the context is like, if the first is null us the second
                 description = info.get("description") or ""
 
+                postText = f"**{title}** \n{description}"
+
                 filename = ydl.prepare_filename(info)
                 infile = Path(filename)
 
@@ -543,7 +547,11 @@ async def on_message(message):
                     outfile = infile
                     print("No compression")
 
-                await message.reply(f"**{title}** \n{description}", file=discord.File(outfile))
+                while len(postText) > 2000:
+                    await message.reply(postText[0:1997] + "...")
+                    postText = postText[1997:]
+
+                await message.reply(postText, file=discord.File(outfile))
         except Exception as e:
             user = await bot.fetch_user(Firedownz_ID)
             await message.reply(f"{user.mention}Download/send failed: `{e}`")
