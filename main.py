@@ -399,7 +399,11 @@ async def on_message(message):
                 stderr=asyncio.subprocess.PIPE
             )
 
-            stdout, stderr = await process.communicate()
+            try:
+                stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=30)
+            except asyncio.TimeoutError:
+                process.kill()
+                raise Exception("gallery-dl timed out on Reddit")
 
             if process.returncode != 0:
                 raise Exception(stderr.decode().strip() or "gallery-dl failed")
@@ -472,7 +476,11 @@ async def on_message(message):
                     stderr=asyncio.subprocess.PIPE
                 )
 
-                stdout, stderr = await process.communicate()
+                try:
+                    stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=30)
+                except asyncio.TimeoutError:
+                    process.kill()
+                    raise Exception("gallery-dl timed out on Reddit")
 
                 paths = stdout.decode().strip().splitlines()
 
@@ -514,7 +522,11 @@ async def on_message(message):
                     stderr=asyncio.subprocess.PIPE
                 )
 
-                stdout, stderr = await process.communicate()
+                try:
+                    stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=30)
+                except asyncio.TimeoutError:
+                    process.kill()
+                    raise Exception("gallery-dl timed out on Reddit")
 
                 paths = stdout.decode().strip().splitlines()
 
