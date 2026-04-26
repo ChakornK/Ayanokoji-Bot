@@ -2,6 +2,7 @@
 .venv/
 *.pem
 config.json
+discord.log
 www.instagram.com_cookies.txt
 www.youtube.com_cookies.txt
 www.reddit.com_cookies.txt

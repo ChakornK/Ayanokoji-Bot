@@ -203,11 +203,13 @@ def grabLink(text):
 
     return text
     
-def imgCompression(maxSizeMB, infile, outfile):
+async def imgCompression(maxSizeMB, infile, outfile, oMessage):
     quality = 95 #Quality is a pillow/image property from 100 to 0 which represents the % quality of an image
 
     if infile.stat().st_size is not None and infile.stat().st_size / (1024 * 1024) >= maxImgSize and imgSizeRestriction:
         raise Exception(f"Video is larger than {maxImgSize / (1024*1024)} MB") 
+
+    msg = await oMessage.reply("Compressing Image(s). Please wait...")
 
     while quality > 10:
         img = Image.open(infile)
@@ -218,6 +220,8 @@ def imgCompression(maxSizeMB, infile, outfile):
             break
 
         quality -= 5
+
+    await msg.delete()
 
     return outfile
 
