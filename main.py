@@ -48,9 +48,9 @@ ydl_opts = {
 }
 
 ydl_opts_youtube = {
-    'format': 'bestvideo+bestaudio/best',
+    'format': 'best',
     'outtmpl': '%(title)s.%(ext)s',
-    'cookiefile': 'www.youtube.com_cookies.txt',
+    'cookies': 'www.youtube.com_cookies.txt',
     'merge_output_format': 'mp4',
 }
 
