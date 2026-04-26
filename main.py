@@ -402,8 +402,7 @@ async def on_message(message):
             stdout, stderr = await process.communicate()
 
             if process.returncode != 0:
-                print(stderr.decode())
-                return None
+                raise Exception(stderr.decode().strip() or "gallery-dl failed")
 
             data = json.loads(stdout.decode())
 
