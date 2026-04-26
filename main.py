@@ -329,6 +329,7 @@ async def on_message(message):
     if any(x in URL for x in ["www.instagram.com/reel", "www.instagram.com/p/"]):
       infiles = []
       outfiles = []
+      using_instaloader = False
       try:
         with YoutubeDL(ydl_opts_instagram) as ydl:
           info = ydl.extract_info(URL, download = False)
@@ -346,6 +347,7 @@ async def on_message(message):
             infiles.append(Path(filename))
           else:
             # Carousel/Album
+            using_instaloader = True
             post_id = URL.split("com/")[1].split("/")[1].split("?")[0]
             post = Post.from_shortcode(instaloader_self.context, post_id)
             success = instaloader_self.download_post(post=post, target=post_id)
@@ -392,7 +394,7 @@ async def on_message(message):
             infile.unlink(missing_ok=True)
             print("Deleted infile")
         
-        if info.get("entries") is not None and len(info.get("entries")) == 0:
+        if using_instaloader:
           post_id = URL.split("com/")[1].split("/")[1].split("?")[0]
           carousel_dir = Path(f"{os.getcwd()}/{post_id}")
           if carousel_dir.exists() and carousel_dir.is_dir():
