@@ -391,38 +391,52 @@ async def on_message(message):
         
 
         try:
-            '''
-            clean_url = URL.split("?")[0].rstrip("/")
-            URL = clean_url + "/.json"
+            process = await asyncio.create_subprocess_exec(
+                "gallery-dl",
+                "-j",
+                URL,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
 
-            headers = {"User-Agent": "my-bot/0.1 by u/Firedownz"} #prevents reddit from blocking access
+            stdout, stderr = await process.communicate()
 
-            r = requests.get(URL, headers=headers, timeout=10) #gets the json
-            r.raise_for_status() #if error, throws exception
+            if process.returncode != 0:
+                print(stderr.decode())
+                return None
 
-            data = r.json()
-            post = data[0]["data"]["children"][0]["data"] #data[0], grabs post, ["data"], blahblah, ifykyk
+            data = json.loads(stdout.decode())
+
+            post = data[0][1]
 
             if post.get("is_self") == True:
                 #Make this do seperate messages for longer posts
                 title = post.get("title", "") #get title if not, return blank string
                 description = post.get("selftext", "")
 
-                await message.reply(f"**{title}** \n{description}")
+                postText = f"**{title}** \n{description}"
+
+                while len(postText) > 2000:
+                    await message.reply(postText[0:1997] + "...")
+                    postText = postText[1997:]
+
+                await message.reply(postText)
             elif post.get("is_video") == True:
                 with YoutubeDL(reddit_opts) as ydl:
                     info = ydl.extract_info(URL, download = False)
 
-                    if Restrictions:
-                        if info.get("filesize_approx") is not None and info.get("filesize_approx") >= maxVideoSize:
-                            raise Exception(f"Video is larger than {maxVideoSize / (1024*1024)} MB")
-                        elif info.get("duration") is not None and info.get("duration") >= maxVideoDuration:
-                            raise Exception(f"Video is larger than {maxVideoDuration} seconds")
+                    if info.get("filesize_approx") is not None and info.get("filesize_approx") >= maxVideoSize and videoSizeRestriction:
+                        raise Exception(f"Video is larger than {maxVideoSize / (1024*1024)} MB")
+                    
+                    if info.get("duration") is not None and info.get("duration") >= maxVideoDuration and videoDurationRestriction:
+                        raise Exception(f"Video is larger than {maxVideoDuration} seconds")
 
                     info = ydl.extract_info(URL, download = True) 
 
                     title = info.get("title") or "Reddit Post" #or operator in the context is like, if the first is null us the second
                     description = info.get("description") or ""
+
+                    postText = f"**{title}** \n{description}"
 
                     filename = ydl.prepare_filename(info)
                     infile = Path(filename)
@@ -433,7 +447,7 @@ async def on_message(message):
                         infile = str(filename)
                         outfile = str(Path(filename).with_stem(Path(filename).stem + "_compressed"))
 
-                        outfile = vidCompression(maxSize, infile, outfile)
+                        outfile = await vidCompression(maxSize, infile, outfile, message)
                         print("compression")
 
                         temp_files.append(outfile)
@@ -441,105 +455,40 @@ async def on_message(message):
                         outfile = infile
                         print("No compression")
 
-                    await message.reply(f"**{title}** \n{description}", file=discord.File(outfile))
+                    while len(postText) > 2000:
+                        await message.reply(postText[0:1997] + "...")
+                        postText = postText[1997:]
+
+                    await message.reply(postText, file=discord.File(outfile))
             elif post.get("post_hint") == "image":
-                imageURL = post.get("url")
-                filename = Path(urlparse(imageURL).path).name  # gets "oyy3g24sqtvg1.jpeg"
-                infile = Path(filename)
                 title = post.get("title", "")
                 description = post.get("selftext", "")
 
+                postText = f"**{title}** \n{description}"
+
+                process = await asyncio.create_subprocess_exec(
+                    "gallery-dl",
+                    URL,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE
+                )
+
+                stdout, stderr = await process.communicate()
+
+                paths = stdout.decode().strip().splitlines()
+
+                if not paths:
+                    raise Exception("gallery-dl returned no files")
+
+                path = paths[0].removeprefix("# ").strip()
+                infile = Path(path)
                 temp_files.append(infile)
-
-                r = requests.get(imageURL, timeout=20)
-                r.raise_for_status()
-
-                infile.write_bytes(r.content)
 
                 if infile.stat().st_size > (maxSize - 1) * 1024 * 1024: 
                     infile = filename
                     outfile = Path(filename).with_stem(Path(filename).stem + "_compressed")
 
-                    outfile = imgCompression(maxSize, infile, outfile)
-                    print("compression")
-
-                    temp_files.append(outfile)
-                else:
-                    outfile = infile
-                    print("No compression")
-
-                await message.reply(f"**{title}** \n{description}", file=discord.File(outfile))
-            elif post.get("is_gallery") == True:
-                outfiles = []
-                images = []
-                title = post.get("title", "")
-                description = post.get("selftext", "")
-
-                for item in post["gallery_data"]["items"]:
-                        media_id = item["media_id"]
-                        meta = post["media_metadata"][media_id]
-
-                        if meta["status"] == "valid":
-                            url = meta["s"]["u"]
-
-                            # fix HTML encoding
-                            url = url.replace("&amp;", "&")
-
-                            images.append(url)
-                for url in images:
-                    filename = Path(urlparse(url).path).name 
-                    infile = Path(filename)
-
-                    temp_files.append(infile)
-
-                    r = requests.get(url, timeout=20)
-                    r.raise_for_status()
-
-                    infile.write_bytes(r.content)
-
-                    if infile.stat().st_size > (maxSize - 1) * 1024 * 1024: 
-                        infile = filename
-                        outfile = Path(filename).with_stem(Path(filename).stem + "_compressed")
-
-                        outfile = imgCompression(maxSize, infile, outfile)
-                        print("compression")
-
-                        temp_files.append(outfile)
-                    else:
-                        outfile = infile
-                        print("No compression")
-
-                    outfiles.append(outfile)
-                    discord_files = [discord.File(str(f)) for f in outfiles]
-
-                await message.reply(f"**{title}** \n{description}", files=discord_files)
-            '''
-            with YoutubeDL(reddit_opts) as ydl:
-                info = ydl.extract_info(URL, download = False)
-
-                if info.get("filesize_approx") is not None and info.get("filesize_approx") >= maxVideoSize and videoSizeRestriction:
-                    raise Exception(f"Video is larger than {maxVideoSize / (1024*1024)} MB")
-                
-                if info.get("duration") is not None and info.get("duration") >= maxVideoDuration and videoDurationRestriction:
-                    raise Exception(f"Video is larger than {maxVideoDuration} seconds")
-
-                info = ydl.extract_info(URL, download = True) 
-
-                title = info.get("title") or "Reddit Post" #or operator in the context is like, if the first is null us the second
-                description = info.get("description") or ""
-
-                postText = f"**{title}** \n{description}"
-
-                filename = ydl.prepare_filename(info)
-                infile = Path(filename)
-
-                temp_files.append(infile)
-
-                if infile.stat().st_size > (maxSize - 1) * 1024 * 1024: 
-                    infile = str(filename)
-                    outfile = str(Path(filename).with_stem(Path(filename).stem + "_compressed"))
-
-                    outfile = await vidCompression(maxSize, infile, outfile, message)
+                    outfile = await imgCompression(maxSize, infile, outfile)
                     print("compression")
 
                     temp_files.append(outfile)
@@ -552,6 +501,53 @@ async def on_message(message):
                     postText = postText[1997:]
 
                 await message.reply(postText, file=discord.File(outfile))
+            elif post.get("is_gallery") == True:
+                outfiles = []
+                title = post.get("title", "")
+                description = post.get("selftext", "")
+
+                postText = f"**{title}** \n{description}"
+
+                process = await asyncio.create_subprocess_exec(
+                    "gallery-dl",
+                    URL,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE
+                )
+
+                stdout, stderr = await process.communicate()
+
+                paths = stdout.decode().strip().splitlines()
+
+                if not paths:
+                    raise Exception("gallery-dl returned no files")
+
+                for path in paths:
+                    path = path.removeprefix("# ").strip()
+                    infile = Path(path)
+
+                    temp_files.append(infile)
+
+                    if infile.stat().st_size > (maxSize - 1) * 1024 * 1024: 
+                        infile = filename
+                        outfile = Path(filename).with_stem(Path(filename).stem + "_compressed")
+
+                        outfile = await imgCompression(maxSize, infile, outfile)
+                        print("compression")
+
+                        temp_files.append(outfile)
+                    else:
+                        outfile = infile
+                        print("No compression")
+
+                    outfiles.append(outfile)
+                    discord_files = [discord.File(str(f)) for f in outfiles]
+
+                while len(postText) > 2000:
+                    await message.reply(postText[0:1997] + "...")
+                    postText = postText[1997:]
+
+                await message.reply(postText, files=discord_files)
         except Exception as e:
             user = await bot.fetch_user(Firedownz_ID)
             await message.reply(f"{user.mention}Download/send failed: `{e}`")
