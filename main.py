@@ -378,6 +378,7 @@ async def on_message(message):
                 print("Deleted infile")
                 
     elif any(x in URL for x in ["reddit.com", "redd.it", "i.redd.it", "preview.redd.it"]):
+        print("reddit")
         infile = None
         outfile = None
         temp_files = []
@@ -391,14 +392,16 @@ async def on_message(message):
         
 
         try:
+            print("reddit in try")
             process = await asyncio.create_subprocess_exec(
                 "gallery-dl",
-                "--cookies", "www.reddit.com_cookies.txt",
+
                 "-j",
                 URL,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE
             )
+            print("reddit got past json extraction")
 
             try:
                 stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=30)
@@ -419,6 +422,7 @@ async def on_message(message):
 
             post = data[0][1]
 
+            print("reddit start of post categories")
             if post.get("is_self") == True:
                 print("reddit text")
                 #Make this do seperate messages for longer posts
@@ -481,7 +485,7 @@ async def on_message(message):
 
                 process = await asyncio.create_subprocess_exec(
                     "gallery-dl",
-                    "--cookies", "www.reddit.com_cookies.txt",
+
                     URL,
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE
@@ -538,7 +542,7 @@ async def on_message(message):
 
                 process = await asyncio.create_subprocess_exec(
                     "gallery-dl",
-                    "--cookies", "www.reddit.com_cookies.txt",
+
                     URL,
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE
@@ -590,7 +594,10 @@ async def on_message(message):
                     postText = postText[1997:]
 
                 await message.reply(postText, files=discord_files)
+            else:
+                print("Reddit not applicable category")
         except Exception as e:
+            print("reddit exception")
             user = await bot.fetch_user(Firedownz_ID)
             await message.reply(f"{user.mention}Download/send failed: `{e}`")
         finally:
