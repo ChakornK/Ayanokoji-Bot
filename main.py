@@ -175,7 +175,13 @@ async def vidCompression(maxSizeMB, infile, outfile, oMessage): #async(ing) a fu
         line = line.decode().strip()
 
         if line.startswith("out_time_ms="):
-            processed_ms = int(line.split("=")[1])
+            processed_ms = line.split("=")[1]
+
+            try:
+                processed_ms = int(processed_ms)
+            except ValueError:
+                continue
+
             processed_seconds = processed_ms / 1_000_000
 
             percent = min(processed_seconds / duration, 1)
